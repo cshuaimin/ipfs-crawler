@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import pickle
 from json.decoder import JSONDecodeError
 from typing import NoReturn, Set
 
@@ -18,14 +19,16 @@ parsed: Set[str] = set()
 
 
 async def main() -> None:
+    try:
+        with open('parsed.pickle', 'rb') as f:
+            parsed = pickle.load(f)
+    except FileNotFoundError:
+        pass
     for _ in range(8):
         asyncio.ensure_future(worker())
-    try:
-        async for log in ipfs.log_tail():
-            if log['event'] == 'handleAddProvider':
-                await queue.put((log['key'], ''))
-    except KeyboardInterrupt:
-        logging.info('Exited')
+    async for log in ipfs.log_tail():
+        if log['event'] == 'handleAddProvider':
+            await queue.put((log['key'], ''))
 
 
 async def worker() -> NoReturn:
@@ -71,4 +74,9 @@ async def add_result(doc: dict) -> None:
     logging.info(f"Indexed {hash} {doc['mime']}")
 
 
-loop.run_until_complete(main())
+try:
+    loop.run_until_complete(main())
+except KeyboardInterrupt:
+    with open('parsed.pickle', 'wb') as f:
+        pickle.dump(parsed, f)
+    logging.info('Exited')
