@@ -20,6 +20,7 @@ parsed: Set[str] = set()
 
 async def main() -> None:
     try:
+        global parsed
         with open('parsed.pickle', 'rb') as f:
             parsed = pickle.load(f)
     except FileNotFoundError:
