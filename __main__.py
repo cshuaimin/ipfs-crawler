@@ -77,6 +77,8 @@ async def add_result(doc: dict) -> None:
 try:
     loop.run_until_complete(main())
 except KeyboardInterrupt:
+    pass
+finally:
     with open('parsed.pickle', 'wb') as f:
         pickle.dump(parsed, f)
     logging.info('Exited')
