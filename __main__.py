@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from json.decoder import JSONDecodeError
-from typing import NoReturn
+from typing import NoReturn, Set
 
 import magic
 from aioelasticsearch import Elasticsearch
@@ -14,6 +14,7 @@ from .ipfs import IsDirError
 
 queue: asyncio.Queue = asyncio.Queue(maxsize=10)
 es = Elasticsearch()
+parsed: Set[str] = set()
 
 
 async def main() -> None:
@@ -30,9 +31,10 @@ async def main() -> None:
 async def worker() -> NoReturn:
     while True:
         hash, filename = await queue.get()
-        if await es.exists('ipfs', '_doc', id=hash):
-            logging.info(f'{hash} exists')
+        if hash in parsed:
+            logging.info(f'{hash} has been parsed, ignored')
             continue
+        parsed.add(hash)
         logging.info(f'Parsing {hash} {filename}')
         try:
             try:
