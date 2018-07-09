@@ -28,6 +28,7 @@ class Ipfs:
             err = await resp.json()
             if err['Message'] == 'this dag node is a directory':
                 raise IsDirError
+            resp.raise_for_status()
         return resp
 
     # https://ipfs.io/docs/api/ and search 'v0/ls'
