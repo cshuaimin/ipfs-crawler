@@ -1,16 +1,14 @@
 import asyncio
 import logging
 import pickle
-from json.decoder import JSONDecodeError
-from typing import NoReturn, Set
+from typing import NoReturn, Set, Union
 
 import magic
 from aioelasticsearch import Elasticsearch
-from aiohttp import ClientError
 
 from .__init__ import ipfs, loop
 from .extractors import extractors
-from .ipfs import IsDirError
+from .ipfs import IsDirError, IpfsError
 
 
 queue: asyncio.Queue = asyncio.Queue(maxsize=10)
@@ -25,8 +23,11 @@ async def main() -> None:
             parsed = pickle.load(f)
     except FileNotFoundError:
         pass
+
+    # start consumers
     for _ in range(8):
         asyncio.ensure_future(worker())
+    # start producing..
     async for log in ipfs.log_tail():
         if log['event'] == 'handleAddProvider':
             await queue.put((log['key'], ''))
@@ -36,42 +37,52 @@ async def worker() -> NoReturn:
     while True:
         hash, filename = await queue.get()
         if hash in parsed:
-            logging.info(f'{hash} has been parsed, ignored')
+            logging.info(f'Ignored {hash}')
             continue
         parsed.add(hash)
-        logging.info(f'Parsing {hash} {filename}')
         try:
-            try:
-                head = await ipfs.cat(hash, length=128)
-            except IsDirError:
-                links = await ipfs.ls(hash)
-                for link in links:
-                    await queue.put((link['Hash'], link['Name']))
-                continue
-            else:
-                mime = magic.from_buffer(head, mime=True)
-                doc = {
-                    'hash': hash,
-                    'filename': filename,
-                    'mime': mime
-                }
-                for type, func in extractors.items():
-                    if mime.startswith(type):
-                        doc.update(await func(hash))
-                        break
-                if mime.startswith('text'):
-                    await add_result(doc)
+            doc = await parse(hash, filename)
+            if doc is not None:
+                await add_result(doc)
         except asyncio.TimeoutError:
-            logging.warning(f'Timed out when parsing {hash}')
-        except JSONDecodeError:
-            logging.warning(f'JSON decode error of {hash}')
-        except ClientError as exc:
-            logging.warning(f'{hash}: {exc!r}')
+            logging.warning(f'{hash} timed out')
+        except IpfsError as exc:
+            logging.warning(f'{hash}: {exc}')
+
+
+async def parse(hash: str, filename: str) -> Union[dict, None]:
+    logging.info(f'Parsing {hash} {filename}')
+    try:
+        head = await ipfs.cat(hash, length=128)
+    # This hash is a directory, add files in it to the queue. There is
+    # currently no good way to determine if it's a file or a directory.
+    except IsDirError:
+        links = await ipfs.ls(hash)
+        for link in links:
+            await queue.put((link['Hash'], link['Name']))
+        return None
+
+    mime = magic.from_buffer(head, mime=True)
+    # Basic info, more in-depth info will be parsed in the extractor function.
+    doc = {
+        'hash': hash,
+        'filename': filename,
+        'mime': mime
+    }
+    try:
+        extract = extractors[mime.split('/')[0]]
+    except KeyError:
+        # If there is no extractor, don't save it.
+        return None
+    else:
+        doc.update(await extract(hash))
+        return doc
 
 
 async def add_result(doc: dict) -> None:
     hash = doc['hash']
-    await es.index('ipfs', '_doc', body=doc, id=hash)
+    index, _ = doc['mime'].split('/')
+    await es.index(index, '_doc', body=doc, id=hash)
     logging.info(f"Indexed {hash} {doc['mime']}")
 
 

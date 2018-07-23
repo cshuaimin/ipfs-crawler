@@ -10,6 +10,10 @@ class IsDirError(Exception):
     pass
 
 
+class IpfsError(Exception):
+    pass
+
+
 class Ipfs:
     def __init__(self, host='127.0.0.1', port=5001):
         self.url = f'http://{host}:{port}/api/v0/'
@@ -24,12 +28,14 @@ class Ipfs:
         resp = await self.session.get(
             self.url + path, params=params, timeout=timeout
         )
-        if resp.status != 200:
-            err = await resp.json()
-            if err['Message'] == 'this dag node is a directory':
-                raise IsDirError
-            resp.raise_for_status()
-        return resp
+        if resp.status == 200:
+            return resp
+
+        err = await resp.json()
+        if err['Message'] == 'this dag node is a directory':
+            raise IsDirError
+        else:
+            raise IpfsError(err['Message'])
 
     # https://ipfs.io/docs/api/ and search 'v0/ls'
     async def ls(self, hash: str) -> List[Dict[str, Union[int, str]]]:
