@@ -2,7 +2,7 @@ from typing import Callable, Dict
 
 import tika.parser
 
-from .__init__ import ipfs, loop
+from .globals import ipfs, loop
 
 extractors: Dict[str, Callable] = {}
 

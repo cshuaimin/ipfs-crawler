@@ -1,22 +1,25 @@
 import asyncio
 import logging
 import pickle
-from typing import NoReturn, Set, Union
+from asyncio import Future
+from typing import List, NoReturn, Set, Union
 
 import magic
-from aioelasticsearch import Elasticsearch
 
-from .__init__ import ipfs, loop
+from .apiserver import start_server, stop_server
 from .extractors import extractors
-from .ipfs import IsDirError, IpfsError
-
+from .globals import es, ipfs, loop
+from .ipfs import IpfsError, IsDirError
 
 queue: asyncio.Queue = asyncio.Queue(maxsize=10)
-es = Elasticsearch()
 parsed: Set[str] = set()
+workers: List[Future] = []
 
 
 async def main() -> None:
+    # start the REST API server
+    await start_server()
+
     try:
         global parsed
         with open('parsed.pickle', 'rb') as f:
@@ -26,7 +29,8 @@ async def main() -> None:
 
     # start consumers
     for _ in range(8):
-        asyncio.ensure_future(worker())
+        workers.append(asyncio.ensure_future(worker()))
+    logging.info('Started')
     # start producing..
     async for log in ipfs.log_tail():
         if log['event'] == 'handleAddProvider':
@@ -86,11 +90,22 @@ async def add_result(doc: dict) -> None:
     logging.info(f"Indexed {hash} {doc['mime']}")
 
 
+async def cleanup() -> None:
+    logging.info('Stopping the workers...')
+    for f in workers:
+        f.cancel()
+    await asyncio.wait(workers)
+    await stop_server()
+    await es.close()
+    await ipfs.close()
+
+
 try:
     loop.run_until_complete(main())
 except KeyboardInterrupt:
     pass
 finally:
+    loop.run_until_complete(cleanup())
     with open('parsed.pickle', 'wb') as f:
         pickle.dump(parsed, f)
-    logging.info('Exited')
+    loop.close()

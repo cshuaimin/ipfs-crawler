@@ -15,9 +15,13 @@ class IpfsError(Exception):
 
 
 class Ipfs:
-    def __init__(self, host='127.0.0.1', port=5001):
+    def __init__(self, host='127.0.0.1', port=5001) -> None:
         self.url = f'http://{host}:{port}/api/v0/'
-        self.session = None
+        self.session: aiohttp.ClientSession = None
+
+    async def close(self) -> None:
+        if self.session is not None:
+            await self.session.close()
 
     async def request(self, path: str, arg: str = None,
                       timeout=60, **params: Union[str, int]):
