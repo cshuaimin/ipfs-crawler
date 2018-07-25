@@ -12,22 +12,22 @@
                     placeholder="Search IPFS..."
                     @on-enter="search"
                     @on-click="search"
-                    v-model="query"
+                    v-model="q"
                     size="large"
                     style="width: 598px"
                     >
                 </Input>
             </div>
         </Header>
-        <Content style="margin: 0 90px">
-            <div class="result-item" v-for="i in 10" :key="i">
+        <Content v-if="result" style="margin: 0 90px">
+            <div class="result-item" v-for="item in result.hits" :key="item._id">
                 <a slot="title" href="#">
                     <div class="link">
-                        <p class="title">星际文件系统- 维基百科，自由的百科全书</p>
-                        <p class="url">https://zh.wikipedia.org › zh-hans › 星际...</p>
+                      <p class="title">{{ item._source.title || item._source.content }}</p>
+                      <p class="url">{{ item._id }}</p>
                     </div>
                 </a>
-                <p>星际文件系统（InterPlanetary File System，缩写IPFS）是一个旨在创建持久且分布式存储和共享文件的网络传输协议。它是一种内容可寻址（ ...</p>
+                <p class="content">{{ item._source.content.substr(0, 400) }}</p>
             </div>
         </Content>
     </Layout>
@@ -48,7 +48,7 @@
 }
 
 .result-item {
-    width: 75vw;
+    width: 60vw;
     margin: 26px 0;
 }
 
@@ -56,21 +56,38 @@
     font-size: 18px;
     line-height: 1.2;
     color: #1967D2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .url {
     font-size: 14px;
     color: #006621;
 }
+
+.content {
+}
 </style>
 
 <script>
+import axios from 'axios'
+
 export default {
   name: 'Results',
   props: ['query'],
+  data () {
+    return {
+      q: this.query,
+      result: null
+    }
+  },
+  async mounted () {
+    await this.search()
+  },
   methods: {
-    search () {
-      this.$router.push(`/search/${this.query}`)
+    async search () {
+      this.result = (await axios.get(`//127.0.0.1:8000/search/${this.q}`)).data
     }
   }
 }
