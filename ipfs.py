@@ -6,6 +6,8 @@ import aiohttp
 
 from .unixfs_pb2 import Data
 
+log = logging.getLogger(__name__)
+
 
 class IsDirError(Exception):
     pass
@@ -66,7 +68,7 @@ class Ipfs:
             async for line in resp.content:
                 yield json.loads(line)
             resp.release()
-            logging.warning('Log tail finished! Restarted')
+            log.warning('Log tail finished! Restarted')
 
     async def object_data(self, hash: str) -> Data:
         resp = await self.request('object/data', hash)

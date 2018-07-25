@@ -1,3 +1,3 @@
-import logging
+import coloredlogs
 
-logging.basicConfig(level=logging.DEBUG)
+coloredlogs.install(level='DEBUG')

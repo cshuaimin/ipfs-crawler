@@ -11,6 +11,9 @@ from .extractors import extractors
 from .globals import es, ipfs
 from .ipfs import IsDirError
 
+log = logging.getLogger(__name__)
+
+
 
 class Crawler:
     def __init__(self) -> None:
@@ -30,7 +33,7 @@ class Crawler:
             self.workers.append(asyncio.ensure_future(self.worker()))
         # start producer
         self.producer: Future = asyncio.ensure_future(self.read_logs())
-        logging.info('Started')
+        log.info('Started')
         await self.producer
 
     async def stop(self) -> None:
@@ -50,7 +53,7 @@ class Crawler:
 
         with open('parsed.pickle', 'wb') as f:
             pickle.dump(self.parsed, f)
-        logging.info('Exited')
+        log.info('Exited')
 
     async def read_logs(self) -> NoReturn:
         async for log in ipfs.log_tail():
@@ -61,7 +64,7 @@ class Crawler:
         while True:
             hash, filename = await self.queue.get()
             if hash in self.parsed:
-                logging.info(f'Ignored {hash}')
+                log.info(f'Ignored {hash}')
                 continue
             self.parsed.add(hash)
             try:
@@ -69,17 +72,17 @@ class Crawler:
                 if doc is not None:
                     await self.add_result(doc)
             except asyncio.TimeoutError:
-                logging.warning(f'{hash} timed out')
+                log.warning(f'{hash} timed out')
             except asyncio.CancelledError:
                 # self.parse() will probably raise CancelledError
                 # when self.stop() called. Won't log this.
                 raise
             except Exception as exc:
-                logging.warning(f'{hash}: {exc!r}')
+                log.warning(f'{hash}: {exc!r}')
                 raise
 
     async def parse(self, hash: str, filename: str) -> Union[dict, None]:
-        logging.info(f'Parsing {hash} {filename}')
+        log.info(f'Parsing {hash} {filename}')
         try:
             head = await ipfs.cat(hash, length=128)
         # This hash is a directory, add files in it to the queue. There is
@@ -113,4 +116,4 @@ class Crawler:
         hash = doc['hash']
         index = doc['mime'].replace('/', '-')
         await es.index(index, '_doc', body=doc, id=hash)
-        logging.info(f"Indexed {hash} {doc['mime']}")
+        log.info(f"Indexed {hash} {doc['mime']}")
