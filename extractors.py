@@ -1,10 +1,12 @@
+import asyncio
 from typing import Callable, Dict
 
 import tika.parser
 
-from .globals import ipfs, loop
+from .globals import ipfs
 
 extractors: Dict[str, Callable] = {}
+loop = asyncio.get_event_loop()
 
 
 def extractor(mime):

@@ -15,7 +15,10 @@ async def search(request: web.Request) -> web.Response:
             }
         }
     })
-    return web.json_response(result['hits'])
+    return web.json_response(
+        result['hits'],
+        headers={'Access-Control-Allow-Origin': '*'}
+    )
 
 
 async def start_server() -> None:
