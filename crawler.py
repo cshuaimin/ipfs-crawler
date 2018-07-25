@@ -70,6 +70,10 @@ class Crawler:
                     await self.add_result(doc)
             except asyncio.TimeoutError:
                 logging.warning(f'{hash} timed out')
+            except asyncio.CancelledError:
+                # self.parse() will probably raise CancelledError
+                # when self.stop() called. Won't log this.
+                raise
             except Exception as exc:
                 logging.warning(f'{hash}: {exc!r}')
                 raise
