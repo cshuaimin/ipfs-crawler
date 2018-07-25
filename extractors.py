@@ -15,7 +15,9 @@ def extractor(mime):
     return decorator
 
 
-def get_text(html: str) -> str:
+@extractor('text/html')
+async def html_info(hash: str) -> dict:
+    html = (await ipfs.cat(hash)).decode()
     soup = BeautifulSoup(html, 'html.parser')
     # kill all script and style elements
     for script in soup(["script", "style"]):
@@ -30,12 +32,8 @@ def get_text(html: str) -> str:
     chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
     # drop blank lines
     text = '\n'.join(chunk for chunk in chunks if chunk)
-    return text
 
-
-@extractor('text/html')
-async def clean_html(hash: str) -> dict:
-    html = (await ipfs.cat(hash)).decode()
     return {
-        'text': get_text(html)
+        'text': text,
+        'title': soup.title.string
     }
