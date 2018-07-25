@@ -23,11 +23,11 @@
             <div class="result-item" v-for="item in result.hits" :key="item._id">
               <a slot="title" :href="`http://127.0.0.1:8080/ipfs/${item._id}`">
                     <div class="link">
-                      <p class="title">{{ item._source.title || item._source.filename || item._source.content }}</p>
+                      <p class="title">{{ item._source.title || item._source.filename || item._source.text }}</p>
                       <p class="url">{{ item._id }}</p>
                     </div>
                 </a>
-                <p class="content" v-html="item.highlight.content"></p>
+                <p class="content" v-html="item.highlight.text"></p>
             </div>
         </Content>
     </Layout>

@@ -11,12 +11,12 @@ async def search(request: web.Request) -> web.Response:
     result = await es.search(body={
         'query': {
             'match': {
-                'content': request.match_info['query']
+                'text': request.match_info['query']
             }
         },
         'highlight': {
             'fields': {
-                'content': {}
+                'text': {}
             }
         }
     })
