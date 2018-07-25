@@ -14,7 +14,6 @@ from .ipfs import IsDirError
 log = logging.getLogger(__name__)
 
 
-
 class Crawler:
     def __init__(self) -> None:
         self.queue: asyncio.Queue = asyncio.Queue(maxsize=10)
@@ -33,7 +32,7 @@ class Crawler:
             self.workers.append(asyncio.ensure_future(self.worker()))
         # start producer
         self.producer: Future = asyncio.ensure_future(self.read_logs())
-        log.info('Started')
+        log.info('Started crawling...')
         await self.producer
 
     async def stop(self) -> None:
@@ -64,7 +63,7 @@ class Crawler:
         while True:
             hash, filename = await self.queue.get()
             if hash in self.parsed:
-                log.info(f'Ignored {hash}')
+                log.debug(f'Ignored {hash}')
                 continue
             self.parsed.add(hash)
             try:
@@ -78,11 +77,11 @@ class Crawler:
                 # when self.stop() called. Won't log this.
                 raise
             except Exception as exc:
-                log.warning(f'{hash}: {exc!r}')
+                log.warning(f'Failed to retrieve {hash}: {exc!r}')
                 raise
 
     async def parse(self, hash: str, filename: str) -> Union[dict, None]:
-        log.info(f'Parsing {hash} {filename}')
+        log.debug(f'Parsing {hash} {filename}')
         try:
             head = await ipfs.cat(hash, length=128)
         # This hash is a directory, add files in it to the queue. There is
@@ -116,4 +115,6 @@ class Crawler:
         hash = doc['hash']
         index = doc['mime'].replace('/', '-')
         await es.index(index, '_doc', body=doc, id=hash)
-        log.info(f"Indexed {hash} {doc['mime']}")
+        log.info(
+            f"Indexed {hash} mime={doc['mime']} {doc['filename']}"
+        )
