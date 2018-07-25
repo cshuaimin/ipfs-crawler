@@ -21,9 +21,9 @@
         </Header>
         <Content v-if="result" style="margin: 0 90px">
             <div class="result-item" v-for="item in result.hits" :key="item._id">
-                <a slot="title" href="#">
+              <a slot="title" :href="`http://127.0.0.1:8080/ipfs/${item._id}`">
                     <div class="link">
-                      <p class="title">{{ item._source.title || item._source.content }}</p>
+                      <p class="title">{{ item._source.title || item._source.filename || item._source.content }}</p>
                       <p class="url">{{ item._id }}</p>
                     </div>
                 </a>
@@ -83,11 +83,11 @@ export default {
     }
   },
   async mounted () {
-    await this.search()
+    this.result = (await axios.get(`//127.0.0.1:8000/search/${this.q}`)).data
   },
   methods: {
     async search () {
-      this.result = (await axios.get(`//127.0.0.1:8000/search/${this.q}`)).data
+      this.$router.push(`/search/${this.q}`)
     }
   }
 }
