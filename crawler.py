@@ -9,7 +9,7 @@ import magic
 from .apiserver import start_server, stop_server
 from .extractors import extractors
 from .globals import es, ipfs
-from .ipfs import IpfsError, IsDirError
+from .ipfs import IsDirError
 
 
 class Crawler:
@@ -70,8 +70,8 @@ class Crawler:
                     await self.add_result(doc)
             except asyncio.TimeoutError:
                 logging.warning(f'{hash} timed out')
-            except IpfsError as exc:
-                logging.warning(f'{hash}: {exc}')
+            except Exception as exc:
+                logging.warning(f'{hash}: {exc!r}')
 
     async def parse(self, hash: str, filename: str) -> Union[dict, None]:
         logging.info(f'Parsing {hash} {filename}')
