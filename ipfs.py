@@ -1,5 +1,6 @@
 import json
-from typing import Dict, List, Union
+import logging
+from typing import AsyncIterator, Dict, List, Union
 
 import aiohttp
 
@@ -59,11 +60,13 @@ class Ipfs:
         resp.release()
         return data
 
-    async def log_tail(self):
-        resp = await self.request('log/tail', timeout=0)
-        async for line in resp.content:
-            yield json.loads(line)
-        resp.release()
+    async def log_tail(self) -> AsyncIterator[dict]:
+        while True:
+            resp = await self.request('log/tail', timeout=0)
+            async for line in resp.content:
+                yield json.loads(line)
+            resp.release()
+            logging.warning('Log tail finished! Restarted')
 
     async def object_data(self, hash: str) -> Data:
         resp = await self.request('object/data', hash)

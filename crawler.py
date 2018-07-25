@@ -72,6 +72,7 @@ class Crawler:
                 logging.warning(f'{hash} timed out')
             except Exception as exc:
                 logging.warning(f'{hash}: {exc!r}')
+                raise
 
     async def parse(self, hash: str, filename: str) -> Union[dict, None]:
         logging.info(f'Parsing {hash} {filename}')
