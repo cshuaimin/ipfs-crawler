@@ -13,6 +13,11 @@ async def search(request: web.Request) -> web.Response:
             'match': {
                 'content': request.match_info['query']
             }
+        },
+        'highlight': {
+            'fields': {
+                'content': {}
+            }
         }
     })
     return web.json_response(

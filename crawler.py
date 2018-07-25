@@ -94,7 +94,7 @@ class Crawler:
             'mime': mime
         }
         try:
-            extract = extractors[mime.split('/')[0]]
+            extract = extractors[mime]
         except KeyError:
             # If there is no extractor, don't save it.
             return None
@@ -104,6 +104,6 @@ class Crawler:
 
     async def add_result(self, doc: dict) -> None:
         hash = doc['hash']
-        index, _ = doc['mime'].split('/')
+        index, _ = doc['mime'].replace('/', '-')
         await es.index(index, '_doc', body=doc, id=hash)
         logging.info(f"Indexed {hash} {doc['mime']}")

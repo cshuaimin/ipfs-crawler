@@ -27,7 +27,7 @@
                       <p class="url">{{ item._id }}</p>
                     </div>
                 </a>
-                <p class="content">{{ item._source.content.substr(0, 400) }}</p>
+                <p class="content" v-html="item.highlight.content"></p>
             </div>
         </Content>
     </Layout>
@@ -67,6 +67,14 @@
 }
 
 .content {
+  font-size: small;
+}
+</style>
+
+<style>
+em {
+  color: #dd4b39;
+  font-style: normal;
 }
 </style>
 
