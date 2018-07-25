@@ -16,7 +16,7 @@ def extractor(mime):
 
 
 def get_text(html: str) -> str:
-    soup = BeautifulSoup(html, 'lxml')
+    soup = BeautifulSoup(html, 'html.parser')
     # kill all script and style elements
     for script in soup(["script", "style"]):
         script.extract()    # rip it out

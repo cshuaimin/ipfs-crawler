@@ -96,14 +96,16 @@ class Crawler:
         try:
             extract = extractors[mime]
         except KeyError:
-            # If there is no extractor, don't save it.
-            return None
+            if mime.startswith(('video', 'image')):
+                return doc
+            else:
+                return None
         else:
             doc.update(await extract(hash))
             return doc
 
     async def add_result(self, doc: dict) -> None:
         hash = doc['hash']
-        index, _ = doc['mime'].replace('/', '-')
+        index = doc['mime'].replace('/', '-')
         await es.index(index, '_doc', body=doc, id=hash)
         logging.info(f"Indexed {hash} {doc['mime']}")
