@@ -1,9 +1,12 @@
+import logging
+
 from aiohttp import web
 
 from .globals import es
 
 routes = web.RouteTableDef()
 runner: web.AppRunner = None
+log = logging.getLogger(__name__)
 
 
 @routes.get('/search/{query}')
@@ -34,6 +37,7 @@ async def start_server() -> None:
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', 8000)
     await site.start()
+    log.info('API server started')
 
 
 async def stop_server() -> None:

@@ -33,7 +33,7 @@ async def html_info(hash: str) -> dict:
     # drop blank lines
     text = '\n'.join(chunk for chunk in chunks if chunk)
 
-    return {
-        'text': text,
-        'title': soup.title.string
-    }
+    info = {'text': text}
+    if soup.title and soup.title.string:
+        info['title'] = soup.title.string
+    return info
