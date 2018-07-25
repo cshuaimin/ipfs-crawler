@@ -50,7 +50,7 @@ class Crawler:
 
         with open('parsed.pickle', 'wb') as f:
             pickle.dump(self.parsed, f)
-            logging.info('Exited')
+        logging.info('Exited')
 
     async def read_logs(self) -> NoReturn:
         async for log in ipfs.log_tail():
