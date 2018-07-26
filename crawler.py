@@ -9,7 +9,7 @@ import magic
 from .apiserver import start_server, stop_server
 from .extractors import extractors
 from .globals import es, ipfs
-from .ipfs import IsDirError
+from .ipfs import IsDirError, IpfsError
 
 log = logging.getLogger(__name__)
 
@@ -68,17 +68,20 @@ class Crawler:
             self.parsed.add(hash)
             try:
                 doc = await self.parse(hash, filename)
-                if doc is not None:
-                    await self.add_result(doc)
-            except asyncio.TimeoutError:
-                log.warning(f'{hash} timed out')
             except asyncio.CancelledError:
                 # self.parse() will probably raise CancelledError
                 # when self.stop() called. Won't log this.
                 raise
+            except asyncio.TimeoutError:
+                log.warning(f'{hash} timed out')
+            except IpfsError as exc:
+                log.error(exc)
             except Exception as exc:
-                log.warning(f'Failed to retrieve {hash}: {exc!r}')
+                log.error(f'Failed to parse {hash}, worker exited: {exc!r}')
                 raise
+            else:
+                if doc is not None:
+                    await self.add_result(doc)
 
     async def parse(self, hash: str, filename: str) -> Union[dict, None]:
         log.debug(f'Parsing {hash} {filename}')
