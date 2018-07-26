@@ -91,7 +91,7 @@ export default {
     }
   },
   async mounted () {
-    this.result = (await axios.get(`//127.0.0.1:8000/search/${this.q}`)).data
+    this.result = (await axios.get(`${location.origin}:8000/search/${this.q}`)).data
   },
   methods: {
     async search () {
