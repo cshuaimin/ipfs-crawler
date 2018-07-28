@@ -92,7 +92,14 @@ class Crawler:
         except IsDirError:
             links = await ipfs.ls(hash)
             for link in links:
-                await self.queue.put((link['Hash'], link['Name']))
+                # Using `await self.queue.put()` will block the worker, if all
+                # workers are blocked, the crawler will fall into a deadlock.
+                # Note: the queue won't increase infinitely because:
+                #   1. if the queue's size >= max size, the producer will stop
+                #      production
+                #   2. the files in the directory are not unlimited, they will
+                #      be used up sooner or later.
+                self.queue._queue.append((link['Hash'], link['Name']))
             return None
 
         mime = magic.from_buffer(head, mime=True)
