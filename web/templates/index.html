@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block main %}
+<div class="container">
+  <img class="ipfs-logo" src="../ipfs.svg" alt="IPFS">
+  <Input title="Search IPFS" :autofocus="true" icon="android-search" placeholder="Search IPFS..." size="large" @on-enter="search"
+    @on-click="search" v-model="query">
+  </Input>
+  <div class="input-group">
+    <input type="text" class="form-control" placeholder="Search IPFS..." autofocus>
+    <div class="input-group-append">
+      <button class="btn btn-outline-secondary" type="button">Search</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .container {
+    width: 600px;
+    margin: 0 auto;
+  }
+
+  .ipfs-logo {
+    width: 256px;
+    display: block;
+    margin: 18vh auto 20px auto;
+  }
+</style>
+{% endblock main %}
