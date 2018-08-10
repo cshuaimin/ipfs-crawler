@@ -3,6 +3,7 @@ from typing import Callable, Dict
 from bs4 import BeautifulSoup
 
 from .globals import ipfs
+from ..webui.models import Html
 
 extractors: Dict[str, Callable] = {}
 loop = asyncio.get_event_loop()
@@ -16,7 +17,7 @@ def extractor(mime):
 
 
 @extractor('text/html')
-async def html_info(hash: str) -> dict:
+async def html_info(hash: str) -> Html:
     html = (await ipfs.cat(hash)).decode()
     soup = BeautifulSoup(html, 'html.parser')
     # kill all script and style elements
@@ -33,7 +34,4 @@ async def html_info(hash: str) -> dict:
     # drop blank lines
     text = '\n'.join(chunk for chunk in chunks if chunk)
 
-    info = {'text': text}
-    if soup.title and soup.title.string:
-        info['title'] = soup.title.string
-    return info
+    return Html(title=soup.title.string, text=text)

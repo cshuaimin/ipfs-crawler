@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class Html(models.Model):
     multihash = models.CharField(max_length=49)
     filename = models.CharField(max_length=128)
@@ -9,3 +10,10 @@ class Html(models.Model):
 
     def __str__(self):
         return self.title or self.filename or self.multihash
+
+
+class Parsed(models.Model):
+    multihash = models.CharField(max_length=49)
+
+    def __str__(self):
+        return self.multihash

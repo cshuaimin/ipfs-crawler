@@ -6,10 +6,10 @@ from typing import List, NoReturn, Set, Union
 
 import magic
 
-from .apiserver import start_server, stop_server
 from .extractors import extractors
-from .globals import es, ipfs
+from .globals import ipfs
 from .ipfs import IsDirError, IpfsError
+from ..webui.models import Html, Parsed
 
 log = logging.getLogger(__name__)
 
@@ -18,15 +18,8 @@ class Crawler:
     def __init__(self) -> None:
         self.queue: asyncio.Queue = asyncio.Queue(maxsize=10)
         self.workers: List[Future] = []
-        try:
-            with open('parsed.pickle', 'rb') as f:
-                self.parsed: Set[str] = pickle.load(f)
-        except FileNotFoundError:
-            pass
 
     async def run(self) -> None:
-        # start the REST API server
-        await start_server()
         # start consumers
         for _ in range(8):
             self.workers.append(asyncio.ensure_future(self.worker()))
@@ -42,16 +35,9 @@ class Crawler:
             w.cancel()
         # ensure exited
         await asyncio.gather(
-            self.producer, *self.workers, return_exceptions=True
+            self.producer, *self.workers, return_exceptions=True  # FIXME: Don't ignore exceptions
         )
-
-        # cleanup
-        await asyncio.gather(ipfs.close(), stop_server())
-        # Close ES after API server, because server needs it.
-        await es.close()
-
-        with open('parsed.pickle', 'wb') as f:
-            pickle.dump(self.parsed, f)
+        await asyncio.gather(ipfs.close())
         log.info('Exited')
 
     async def read_logs(self) -> NoReturn:
@@ -62,12 +48,12 @@ class Crawler:
     async def worker(self) -> NoReturn:
         while True:
             hash, filename = await self.queue.get()
-            if hash in self.parsed:
+            if Parsed.objects.filter(multihash=hash).exists():
                 log.debug(f'Ignored {hash}')
                 continue
-            self.parsed.add(hash)
+            Parsed(multihash=hash).save()
             try:
-                doc = await self.parse(hash, filename)
+                await self.parse(hash, filename)
             except asyncio.CancelledError:
                 # self.parse() will probably raise CancelledError
                 # when self.stop() called. Won't log this.
@@ -79,11 +65,8 @@ class Crawler:
             except Exception as exc:
                 log.error(f'Failed to parse {hash}, worker exited: {exc!r}')
                 raise
-            else:
-                if doc is not None:
-                    await self.add_result(doc)
 
-    async def parse(self, hash: str, filename: str) -> Union[dict, None]:
+    async def parse(self, hash: str, filename: str) -> None:
         log.debug(f'Parsing {hash} {filename}')
         try:
             head = await ipfs.cat(hash, length=128)
@@ -103,28 +86,13 @@ class Crawler:
             return None
 
         mime = magic.from_buffer(head, mime=True)
-        # Basic information, more in-depth information will be parsed
-        # in the extractor function.
-        doc = {
-            'hash': hash,
-            'filename': filename,
-            'mime': mime
-        }
         try:
             extract = extractors[mime]
         except KeyError:
-            if mime.startswith(('video', 'image')):
-                return doc
-            else:
-                return None
+            return
         else:
-            doc.update(await extract(hash))
-            return doc
-
-    async def add_result(self, doc: dict) -> None:
-        hash = doc['hash']
-        index = doc['mime'].replace('/', '-')
-        await es.index(index, '_doc', body=doc, id=hash)
-        log.info(
-            f"Indexed {hash} mime={doc['mime']} {doc['filename']}"
-        )
+            info = extract(hash)
+            info.multihash = hash
+            info.filename = filename
+            info.type = mime.split('/')[1]
+            info.save()
