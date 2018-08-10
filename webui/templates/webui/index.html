@@ -1,0 +1,28 @@
+{% extends 'webui/base.html' %}
+{% load static %}
+{% block main %}
+<div class="container">
+  <img class="ipfs-logo" src="{% static 'webui/ipfs.svg' %}" alt="IPFS">
+  <form action="search">
+    <div class="input-group">
+      <input name="q" type="text" class="form-control" placeholder="Search IPFS..." autofocus>
+      <div class="input-group-append">
+        <button class="btn btn-outline-secondary" type="submit">Search</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<style>
+  .container {
+    width: 600px;
+    margin: 0 auto;
+  }
+
+  .ipfs-logo {
+    width: 256px;
+    display: block;
+    margin: 18vh auto 20px auto;
+  }
+</style>
+{% endblock main %}

@@ -1,3 +1,4 @@
 aiohttp
-asyncpg
+psycopg2-binary
 coloredlog
+magic
