@@ -1,9 +1,8 @@
-{% extends 'webui/base.html' %}
-{% load static %}
+{% extends 'base.jinja2' %}
 {% block main %}
 <nav class="navbar navbar-expand-lg navbar-light bg-light">
     <a class="navbar-brand" href="/">
-        <img src="{% static 'webui/ipfs.svg' %}" alt="IPFS" height="48">
+        <img src="static/ipfs.svg" alt="IPFS" height="48">
     </a>
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent">
         <span class="navbar-toggler-icon"></span>
@@ -24,10 +23,10 @@
     <a href="http://127.0.0.1:8080/ipfs/">
         <div class="link">
             <p class="title">{{ item.title }}</p>
-            <p class="url">{{ item.multihash }}</p>
+            <p class="url">{{ item.hash }}</p>
         </div>
     </a>
-    <p class="content">{{ item.text }}</p>
+    <p class="content">{{ item.text|truncate(200) }}</p>
 </div>
 {% endfor %}
 

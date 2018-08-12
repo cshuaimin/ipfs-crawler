@@ -1,8 +1,7 @@
-{% extends 'webui/base.html' %}
-{% load static %}
+{% extends 'base.jinja2' %}
 {% block main %}
 <div class="container">
-  <img class="ipfs-logo" src="{% static 'webui/ipfs.svg' %}" alt="IPFS">
+  <img class="ipfs-logo" src="static/ipfs.svg" alt="IPFS">
   <form action="search">
     <div class="input-group">
       <input name="q" type="text" class="form-control" placeholder="Search IPFS..." autofocus>
