@@ -4,8 +4,6 @@ from typing import AsyncIterator, Dict, List, Union
 
 import aiohttp
 
-from .unixfs_pb2 import Data
-
 log = logging.getLogger(__name__)
 
 
@@ -69,10 +67,3 @@ class Ipfs:
                 yield json.loads(line)
             resp.release()
             log.warning('Log tail finished! Restarted')
-
-    async def object_data(self, hash: str) -> Data:
-        resp = await self.request('object/data', hash)
-        data = Data()
-        data.ParseFromString(await resp.read())
-        resp.release()
-        return data

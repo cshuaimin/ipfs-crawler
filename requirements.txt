@@ -1,4 +1,5 @@
 aiohttp
 psycopg2-binary
-coloredlog
-magic
+coloredlogs
+python-magic
+bs4

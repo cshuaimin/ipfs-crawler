@@ -20,6 +20,8 @@ RUN echo "deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu/ bionic main restricted
   && apt-get autoremove -y \
   && rm -rf /var/lib/apt/lists/*
 
+RUN echo "shared_preload_libraries = 'pg_jieba.so'" >> /var/lib/postgresql/10/main
+
 ADD https://github.com/ipfs/go-ipfs/releases/download/v0.4.17/go-ipfs_v0.4.17_linux-amd64.tar.gz /tmp/ipfs.tgz
 RUN cd /tmp \
   && tar -xf ipfs.tgz \
