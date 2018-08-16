@@ -22,7 +22,6 @@ class HtmlInfo:
     filename: str = ''
 
 
-
 class Crawler:
     def __init__(self) -> None:
         self.queue: asyncio.Queue = asyncio.Queue(maxsize=10)
@@ -127,7 +126,7 @@ class Crawler:
         return HtmlInfo(title=soup.title.string, text=text)
 
     async def add_result(self, info: HtmlInfo) -> None:
-        self.conn_pool.execute('INSERT INTO crawler_html(hash, filename, title, text) values ($1, $2, $3, $4, $5)',
+        self.conn_pool.execute('INSERT INTO html(hash, filename, title, text) values ($1, $2, $3, $4, $5)',
             *info
         )
 

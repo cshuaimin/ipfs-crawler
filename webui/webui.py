@@ -15,9 +15,7 @@ async def search(request):
     if not query:
         raise web.HTTPFound('/')
     result = await request.app['pool'].fetch(
-        'SELECT hash, '
-        "ts_headline('jiebacfg', title, query) AS title, "
-        "ts_headline('jiebacfg', text, query) AS text, "
+        'SELECT hash, title, text, '
         'ts_rank_cd(tsv, query) AS rank '
         "FROM crawler_html, to_tsquery('jiebacfg', $1) query "
         'WHERE tsv @@ query '
@@ -25,10 +23,6 @@ async def search(request):
         'LIMIT 10',
         query
     )
-    r0 = dict(result[0])
-    r1 = dict(result[1])
-    print(r0['title'], r0['rank'])
-    print(r1['title'], r1['rank'])
     return {'result': result}
 
 
@@ -39,11 +33,10 @@ aiohttp_jinja2.setup(
 )
 app.router.add_get('/', index)
 app.router.add_get('/search', search)
-app.router.add_static('/static/', '/home/csm/code/ipfs_crawler/webui/static')
+app.router.add_static('/static/', 'webui/static')
 async def conn_pool(app):
     app['pool'] = await asyncpg.create_pool(user='postgres', database='ipfs_crawler')
     yield
     await app['pool'].close()
 app.cleanup_ctx.append(conn_pool)
-web.run_app(app)
-
+web.run_app(app, port=80)

@@ -1,7 +1,7 @@
 #!/bin/sh
 
-if [ -e "/root/.ipfs/config" ]; then
-  echo "Found IPFS fs-repo"
+if [ -e "$IPFS_PATH/config" ]; then
+  echo "Found IPFS fs-repo $IPFS_PATH"
 else
   ipfs init
 fi

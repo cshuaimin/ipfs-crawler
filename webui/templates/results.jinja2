@@ -22,11 +22,11 @@
 <div class="item card card-body">
     <a href="http://127.0.0.1:8080/ipfs/">
         <div class="link">
-            <p class="title">{{ item.title|safe }}</p>
+            <p class="title">{{ item.title }}</p>
             <p class="url">{{ item.hash }}</p>
         </div>
     </a>
-    <p class="content">{{ item.text|safe }}</p>
+    <p class="content">{{ item.text|truncate(128) }}</p>
 </div>
 {% endfor %}
 
