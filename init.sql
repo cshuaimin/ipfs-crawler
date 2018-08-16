@@ -14,8 +14,8 @@ CREATE TABLE parsed (hash varchar(49));
 CREATE FUNCTION tsv_update_trigger() RETURNS trigger AS $$
 begin
   new.tsv :=
-    setweight(to_tsvector(coalesce(new.title, '')), 'A') ||
-    setweight(to_tsvector(coalesce(new.text, '')), 'C');
+    setweight(to_tsvector('jiebaqry', coalesce(new.title, '')), 'A') ||
+    setweight(to_tsvector('jiebaqry', coalesce(new.text, '')), 'C');
   return new;
 end
 $$ LANGUAGE plpgsql;

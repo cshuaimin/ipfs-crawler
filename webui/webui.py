@@ -19,7 +19,7 @@ async def search(request):
     result = await request.app['pool'].fetch(
         'SELECT hash, title, text, '
         'ts_rank_cd(tsv, query) AS rank '
-        "FROM html, to_tsquery('jiebacfg', $1) query "
+        "FROM html, to_tsquery('jiebaqry', $1) query "
         'WHERE tsv @@ query '
         'ORDER BY rank DESC '
         'LIMIT 10',
