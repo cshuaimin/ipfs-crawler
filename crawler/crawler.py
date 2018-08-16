@@ -1,9 +1,8 @@
 import asyncio
 import logging
-import pickle
 from asyncio import Future
 from dataclasses import dataclass
-from typing import Callable, Dict, List, NoReturn, Set, Union
+from typing import List, NoReturn, Union
 
 import asyncpg
 import magic
@@ -29,7 +28,10 @@ class Crawler:
         self.ipfs = Ipfs()
 
     async def run(self) -> None:
-        self.conn_pool = await asyncpg.create_pool(user='postgres', database='ipfs_crawler')
+        self.conn_pool = await asyncpg.create_pool(
+            user='postgres',
+            database='ipfs_crawler'
+        )
         # start consumers
         for _ in range(8):
             self.workers.append(asyncio.ensure_future(self.worker()))
@@ -45,14 +47,16 @@ class Crawler:
             w.cancel()
         # ensure exited
         await asyncio.gather(
-            self.producer, *self.workers, return_exceptions=True  # FIXME: Don't ignore exceptions
+            # FIXME: Don't ignore exceptions
+            self.producer, *self.workers, return_exceptions=True
         )
         await asyncio.gather(self.ipfs.close(), self.conn_pool.close())
         log.info('Exited')
 
     async def read_logs(self) -> NoReturn:
-        async for log in self.ipfs.log_tail():
-            pass
+        while True:
+            await asyncio.sleep(10000)
+        # async for log in self.ipfs.log_tail():
             # if log['event'] == 'handleAddProvider':
             #     await self.queue.put((log['key'], ''))
 
@@ -119,14 +123,18 @@ class Crawler:
         # break into lines and remove leading and trailing space on each
         lines = (line.strip() for line in text.splitlines())
         # break multi-headlines into a line each
-        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+        chunks = (
+            phrase.strip() for line in lines for phrase in line.split('  ')
+        )
         # drop blank lines
         text = '\n'.join(chunk for chunk in chunks if chunk)
 
         return HtmlInfo(title=soup.title.string, text=text)
 
     async def add_result(self, info: HtmlInfo) -> None:
-        self.conn_pool.execute('INSERT INTO html(hash, filename, title, text) values ($1, $2, $3, $4, $5)',
+        self.conn_pool.execute(
+            'INSERT INTO html(hash, filename, title, text) '
+            'values ($1, $2, $3, $4, $5)',
             *info
         )
 

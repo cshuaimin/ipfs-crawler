@@ -53,15 +53,6 @@ RUN mkdir -p $IPFS_PATH /ipfs_crawler \
   && chown postgres:postgres $IPFS_PATH /ipfs_crawler
 COPY . /ipfs_crawler/
 
-# init database
-USER postgres
-RUN PATH=/usr/lib/postgresql/10/bin:$PATH \
-  && pg_ctl -D /var/lib/postgresql/10/main -o '-c config_file=/etc/postgresql/10/main/postgresql.conf' start \
-  && createdb ipfs_crawler \
-  && psql -d ipfs_crawler -f /ipfs_crawler/init.sql \
-  && pg_ctl -D /var/lib/postgresql/10/main stop
-USER root
-
 # install requirements
 RUN pip3 install -i https://pypi.douban.com/simple/ setuptools wheel \
   && pip3 install -i https://pypi.douban.com/simple/ git+https://github.com/Supervisor/supervisor \
@@ -78,8 +69,16 @@ RUN apt-get remove -y \
   && apt-get autoremove -y \
   && rm -rf /var/lib/apt/lists/*
 
+# init database
+USER postgres
+RUN PATH=/usr/lib/postgresql/10/bin:$PATH \
+  && pg_ctl -D /var/lib/postgresql/10/main -o '-c config_file=/etc/postgresql/10/main/postgresql.conf' start \
+  && createdb ipfs_crawler \
+  && psql -d ipfs_crawler -f /ipfs_crawler/init.sql \
+  && pg_ctl -D /var/lib/postgresql/10/main stop
+
 # Ports for Swarm TCP, Swarm uTP, API, Gateway, Swarm Websockets and the WebUI.
-EXPOSE 4001 4002/udp 5001 8080 8081 80
+EXPOSE 4001 4002/udp 5001 8080 8081 9000
 
 VOLUME /var/lib/postgres/data $IPFS_PATH
 CMD [ "supervisord", "-c", "/ipfs_crawler/supervisord.conf" ]

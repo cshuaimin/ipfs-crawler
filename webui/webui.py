@@ -1,6 +1,8 @@
+from pathlib import Path
+
 import aiohttp_jinja2
-import jinja2
 import asyncpg
+import jinja2
 from aiohttp import web
 
 
@@ -17,13 +19,22 @@ async def search(request):
     result = await request.app['pool'].fetch(
         'SELECT hash, title, text, '
         'ts_rank_cd(tsv, query) AS rank '
-        "FROM crawler_html, to_tsquery('jiebacfg', $1) query "
+        "FROM html, to_tsquery('jiebacfg', $1) query "
         'WHERE tsv @@ query '
         'ORDER BY rank DESC '
         'LIMIT 10',
         query
     )
     return {'result': result}
+
+
+async def conn_pool(app):
+    app['pool'] = await asyncpg.create_pool(
+        user='postgres',
+        database='ipfs_crawler'
+    )
+    yield
+    await app['pool'].close()
 
 
 app = web.Application()
@@ -33,10 +44,7 @@ aiohttp_jinja2.setup(
 )
 app.router.add_get('/', index)
 app.router.add_get('/search', search)
-app.router.add_static('/static/', 'webui/static')
-async def conn_pool(app):
-    app['pool'] = await asyncpg.create_pool(user='postgres', database='ipfs_crawler')
-    yield
-    await app['pool'].close()
+static = Path(__file__).absolute().parent / 'static'
+app.router.add_static('/static/', static)
 app.cleanup_ctx.append(conn_pool)
-web.run_app(app, port=80)
+web.run_app(app, port=9000)
