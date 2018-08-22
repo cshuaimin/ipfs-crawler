@@ -7,8 +7,11 @@ from aiohttp import web
 
 
 @aiohttp_jinja2.template('index.jinja2')
-def index(request):
-    return {}
+async def index(request):
+    count = await request.app['pool'].fetchval(
+        'SELECT count(1) from html'
+    )
+    return {'count': count}
 
 
 @aiohttp_jinja2.template('results.jinja2')

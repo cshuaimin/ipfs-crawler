@@ -1,27 +1,36 @@
 {% extends 'base.jinja2' %}
 {% block main %}
-<div class="container">
+<main>
   <img class="ipfs-logo" src="static/ipfs.svg" alt="IPFS">
   <form action="search">
     <div class="input-group">
-      <input name="q" type="text" class="form-control" placeholder="Search IPFS..." autofocus>
+      <input name="q" type="text" class="form-control" placeholder="Indexed {{ '{:,d}'.format(count) }} files" autofocus>
       <div class="input-group-append">
         <button class="btn btn-outline-secondary" type="submit">Search</button>
       </div>
     </div>
   </form>
-</div>
+  <div class="text-center mt-4 info">
+    <p>IPFS Crawler & Search Engine</p>
+    <a href="https://github.com/cshuaimin/ipfs-crawler">Code</a> | <a href="/about">About</a
+  </div>
+</main>
 
 <style>
-  .container {
-    width: 600px;
-    margin: 0 auto;
+  main {
+    width: 700px;
+    margin: 20vh auto 0 auto;
   }
-
   .ipfs-logo {
     width: 256px;
     display: block;
-    margin: 18vh auto 20px auto;
+    margin: 0 auto 30px auto;
+  }
+  .info {
+    color: #9a9a9a;
+  }
+  .info > a {
+    color: #2f82c2;
   }
 </style>
 {% endblock main %}
