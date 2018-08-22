@@ -16,7 +16,7 @@
 <div class="row">
 {% for item in result %}
 <div class="item card card-body col-md-6 offset-md-1">
-  <a href="http://127.0.0.1:8080/ipfs/">
+  <a href="http://127.0.0.1:8080/ipfs/{{ item.hash }}">
     <div class="link">
       <p class="title">{{ item.title }}</p>
       <p class="url">{{ item.hash }}</p>
