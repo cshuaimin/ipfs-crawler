@@ -28,7 +28,7 @@ async def search(request):
         'LIMIT 10',
         query
     )
-    return {'result': result}
+    return {'result': result, 'query': query}
 
 
 async def conn_pool(app):
