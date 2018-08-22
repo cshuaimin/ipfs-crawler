@@ -1,6 +1,6 @@
 {% extends 'base.jinja2' %}
 {% block main %}
-<main>
+<main class="col-xl-5">
   <img class="ipfs-logo" src="static/ipfs.svg" alt="IPFS">
   <form action="search">
     <div class="input-group">
@@ -12,22 +12,25 @@
   </form>
   <div class="text-center mt-4 info">
     <p>IPFS Crawler & Search Engine</p>
-    <a href="https://github.com/cshuaimin/ipfs-crawler">Code</a> | <a href="/about">About</a
+    <a href="https://github.com/cshuaimin/ipfs-crawler">Code</a> | <a href="/about">About</a>
   </div>
 </main>
 
 <style>
   main {
-    width: 700px;
-    margin: 20vh auto 0 auto;
+    margin: 18vh auto 0 auto;
+    padding: 0 !important;
   }
   .ipfs-logo {
-    width: 256px;
+    width: 35%;
     display: block;
     margin: 0 auto 30px auto;
   }
   .info {
     color: #9a9a9a;
+  }
+  .info > p {
+    margin-bottom: 2px;
   }
   .info > a {
     color: #2f82c2;
