@@ -67,3 +67,12 @@ class Ipfs:
                 yield json.loads(line)
             resp.release()
             log.warning('Log tail finished! Restarted')
+
+    async def sniff(self) -> AsyncIterator[str]:
+        async for event in self.log_tail():
+            logs = event.get('Logs')
+            if logs:
+                for log in logs:
+                    for field in log['Fields']:
+                        if field['Key'] == 'key':
+                            yield field['Value']

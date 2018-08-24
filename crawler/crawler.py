@@ -54,11 +54,8 @@ class Crawler:
         log.info('Exited')
 
     async def read_logs(self) -> NoReturn:
-        while True:
-            await asyncio.sleep(10000)
-        # async for log in self.ipfs.log_tail():
-            # if log['event'] == 'handleAddProvider':
-            #     await self.queue.put((log['key'], ''))
+        async for hash in self.ipfs.sniff():
+            await self.queue.put((hash, ''))
 
     async def worker(self) -> NoReturn:
         while True:
