@@ -38,7 +38,7 @@ class StackedJson:
             try:
                 # `raw_decode` doesn't accept strings that have
                 # prefixing whitespace. So we need to search to find
-                # the first none-whitespace part of out document.
+                # the first none-whitespace part of our document.
                 while len(buffer) > pos and buffer[pos].isspace():
                     pos += 1
                 obj, pos = self.raw_decode(buffer, pos)
@@ -110,4 +110,4 @@ class Ipfs:
                 yield sj
             finally:
                 fut.cancel()
-                await fut
+                await sj.add(None)
