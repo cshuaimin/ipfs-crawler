@@ -1,10 +1,13 @@
 import json
 import logging
+import re
+from json import JSONDecoder
 from typing import AsyncIterator, Dict, List, Union
 
 import aiohttp
 
 log = logging.getLogger(__name__)
+NOT_WHITESPACE = re.compile(r'[^\s]')
 
 
 class IsDirError(Exception):
@@ -13,6 +16,16 @@ class IsDirError(Exception):
 
 class IpfsError(Exception):
     pass
+
+
+def decode_stacked(document, pos=0, decoder=JSONDecoder()):
+    while True:
+        match = NOT_WHITESPACE.search(document, pos)
+        if not match:
+            return
+        pos = match.start()
+        obj, pos = decoder.raw_decode(document, pos)
+        yield obj
 
 
 class Ipfs:
@@ -63,16 +76,8 @@ class Ipfs:
     async def log_tail(self) -> AsyncIterator[dict]:
         while True:
             resp = await self.request('log/tail', timeout=0)
-            async for line in resp.content:
-                yield json.loads(line)
+            async for data in resp.content.iter_any():
+                for obj in decode_stacked(data.decode()):
+                    yield obj
             resp.release()
             log.warning('Log tail finished! Restarted')
-
-    async def sniff(self) -> AsyncIterator[str]:
-        async for event in self.log_tail():
-            logs = event.get('Logs')
-            if logs:
-                for log in logs:
-                    for field in log['Fields']:
-                        if field['Key'] == 'key':
-                            yield field['Value']

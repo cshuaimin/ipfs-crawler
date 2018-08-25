@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 
 from ipfs import Ipfs, IpfsError, IsDirError
 
+logging.basicConfig(level='DEBUG')
 log = logging.getLogger(__name__)
 
 
@@ -59,8 +60,9 @@ class Crawler:
         log.info('Exited')
 
     async def read_logs(self) -> NoReturn:
-        async for hash in self.ipfs.sniff():
-            await self.queue.put((hash, ''))
+        async for log in self.ipfs.log_tail():
+            if log.get('Operation') == 'handleAddProvider':
+                await self.queue.put((log['Tags']['key'], ''))
 
     async def worker(self) -> NoReturn:
         while True:
