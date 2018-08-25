@@ -83,5 +83,5 @@ RUN PATH=/usr/lib/postgresql/10/bin:$PATH \
 # Ports for Swarm TCP, Swarm uTP, API, Gateway, Swarm Websockets and the WebUI.
 EXPOSE 4001 4002/udp 5001 8080 8081 9000
 
-VOLUME /var/lib/postgres/data $IPFS_PATH
+VOLUME /var/lib/postgresql/10/main $IPFS_PATH
 CMD [ "supervisord", "-c", "/ipfs_crawler/supervisord.conf" ]
