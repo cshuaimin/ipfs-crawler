@@ -2,7 +2,7 @@ import asyncio
 import json
 from contextlib import asynccontextmanager
 from json import JSONDecodeError, JSONDecoder
-from typing import Dict, List, Union
+from typing import Dict, List, Union, AsyncIterator
 
 import aiohttp
 
@@ -22,12 +22,20 @@ class StackedJson:
         {"k2":"v2"}
         [3,4]
     """
-    def __init__(self) -> None:
+    def __init__(self, source: AsyncIterator[bytes]) -> None:
         self.raw_decode = JSONDecoder().raw_decode
         self.queue = asyncio.Queue(maxsize=16)
+        self.source = source
+        self.fut = asyncio.ensure_future(self.read_from_stream())
 
-    async def add(self, part: str) -> None:
-        await self.queue.put(part)
+    async def read_from_stream(self) -> None:
+        async for data in self.source:
+            await self.queue.put(data.decode())
+        await self.queue.put(None)
+
+    async def close(self):
+        self.fut.cancel()
+        await self.queue.put(None)
 
     async def __aiter__(self):
         buffer = await self.queue.get()
@@ -71,14 +79,14 @@ class Ipfs:
         async with self.session.get(
             self.url + path, params=params, timeout=timeout
         ) as resp:
-            if resp.status == 200:
-                yield resp
-            else:
+            if resp.status != 200:
                 err = await resp.json()
                 if err['Message'] == 'this dag node is a directory':
                     raise IsDirError
                 else:
                     raise IpfsError(err['Message'])
+            else:
+                yield resp
 
     # https://ipfs.io/docs/api/ and search 'v0/ls'
     async def ls(self, hash: str) -> List[Dict[str, Union[int, str]]]:
@@ -97,17 +105,11 @@ class Ipfs:
 
     @asynccontextmanager
     async def log_tail(self):
-        async with self.request('log/tail', timeout=0) as resp:
-
-            async def add():
-                async for data in resp.content.iter_any():
-                    await sj.add(data.decode())
-
-            sj = StackedJson()
-            fut = asyncio.ensure_future(add())
-
-            try:
-                yield sj
-            finally:
-                fut.cancel()
-                await sj.add(None)
+        while True:
+            async with self.request('log/tail', timeout=0) as resp:
+                sj = StackedJson(resp.content.iter_any())
+                try:
+                    yield sj
+                finally:
+                    await sj.close()
+            print('log tail restarted')
