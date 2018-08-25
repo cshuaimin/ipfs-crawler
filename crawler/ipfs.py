@@ -1,13 +1,10 @@
+import asyncio
 import json
-import logging
-import re
-from json import JSONDecoder
-from typing import AsyncIterator, Dict, List, Union
+from contextlib import asynccontextmanager
+from json import JSONDecodeError, JSONDecoder
+from typing import Dict, List, Union
 
 import aiohttp
-
-log = logging.getLogger(__name__)
-NOT_WHITESPACE = re.compile(r'[^\s]')
 
 
 class IsDirError(Exception):
@@ -18,14 +15,41 @@ class IpfsError(Exception):
     pass
 
 
-def decode_stacked(document, pos=0, decoder=JSONDecoder()):
-    while True:
-        match = NOT_WHITESPACE.search(document, pos)
-        if not match:
+class StackedJson:
+    """Parse stacked json objects sent in an infinite stream, i.e.:
+        {"k1":"v1"}
+        [1,2]
+        {"k2":"v2"}
+        [3,4]
+    """
+    def __init__(self) -> None:
+        self.raw_decode = JSONDecoder().raw_decode
+        self.queue = asyncio.Queue(maxsize=16)
+
+    async def add(self, part: str) -> None:
+        await self.queue.put(part)
+
+    async def __aiter__(self):
+        buffer = await self.queue.get()
+        if buffer is None:
             return
-        pos = match.start()
-        obj, pos = decoder.raw_decode(document, pos)
-        yield obj
+        pos = 0
+        while True:
+            try:
+                # `raw_decode` doesn't accept strings that have
+                # prefixing whitespace. So we need to search to find
+                # the first none-whitespace part of out document.
+                while len(buffer) > pos and buffer[pos].isspace():
+                    pos += 1
+                obj, pos = self.raw_decode(buffer, pos)
+            except JSONDecodeError:
+                part = await self.queue.get()
+                if part is None:
+                    return
+                buffer = buffer[pos:] + part
+                pos = 0
+            else:
+                yield obj
 
 
 class Ipfs:
@@ -37,30 +61,30 @@ class Ipfs:
         if self.session is not None:
             await self.session.close()
 
+    @asynccontextmanager
     async def request(self, path: str, arg: str = None,
                       timeout=60, **params: Union[str, int]):
         if self.session is None:
             self.session = aiohttp.ClientSession()
         if arg:
             params['arg'] = arg
-        resp = await self.session.get(
+        async with self.session.get(
             self.url + path, params=params, timeout=timeout
-        )
-        if resp.status == 200:
-            return resp
-
-        err = await resp.json()
-        if err['Message'] == 'this dag node is a directory':
-            raise IsDirError
-        else:
-            raise IpfsError(err['Message'])
+        ) as resp:
+            if resp.status == 200:
+                yield resp
+            else:
+                err = await resp.json()
+                if err['Message'] == 'this dag node is a directory':
+                    raise IsDirError
+                else:
+                    raise IpfsError(err['Message'])
 
     # https://ipfs.io/docs/api/ and search 'v0/ls'
     async def ls(self, hash: str) -> List[Dict[str, Union[int, str]]]:
-        resp = await self.request('ls', hash)
-        result = json.loads(await resp.text())
-        resp.release()
-        return result['Objects'][0]['Links']
+        async with self.request('ls', hash) as resp:
+            result = json.loads(await resp.text())
+            return result['Objects'][0]['Links']
 
     async def cat(self, hash: str, offset: int = 0, length: int = -1) -> bytes:
         kw = {}
@@ -68,16 +92,22 @@ class Ipfs:
             kw['offset'] = offset
         if length != -1:
             kw['length'] = length
-        resp = await self.request('cat', hash, **kw)
-        data = await resp.read()
-        resp.release()
-        return data
+        async with self.request('cat', hash, **kw) as resp:
+            return await resp.read()
 
-    async def log_tail(self) -> AsyncIterator[dict]:
-        while True:
-            resp = await self.request('log/tail', timeout=0)
-            async for data in resp.content.iter_any():
-                for obj in decode_stacked(data.decode()):
-                    yield obj
-            resp.release()
-            log.warning('Log tail finished! Restarted')
+    @asynccontextmanager
+    async def log_tail(self):
+        async with self.request('log/tail', timeout=0) as resp:
+
+            async def add():
+                async for data in resp.content.iter_any():
+                    await sj.add(data.decode())
+
+            sj = StackedJson()
+            fut = asyncio.ensure_future(add())
+
+            try:
+                yield sj
+            finally:
+                fut.cancel()
+                await fut

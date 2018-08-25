@@ -1,5 +1,6 @@
 import asyncio
 import logging
+
 from asyncio import Future
 from dataclasses import dataclass, field
 from typing import List, NoReturn, Union
@@ -61,9 +62,10 @@ class Crawler:
         log.info('Exited')
 
     async def read_logs(self) -> NoReturn:
-        async for log in self.ipfs.log_tail():
-            if log.get('Operation') == 'handleAddProvider':
-                await self.queue.put((log['Tags']['key'], ''))
+        async with self.ipfs.log_tail() as log_iter:
+            async for log in log_iter:
+                if log.get('Operation') == 'handleAddProvider':
+                    await self.queue.put((log['Tags']['key'], ''))
 
     async def worker(self) -> NoReturn:
         while True:
@@ -109,7 +111,7 @@ class Crawler:
 
         mime = magic.from_buffer(head, mime=True)
         if mime != 'text/html':
-            log.debug(f'Ignored mime: {mime}')
+            log.debug(f'Ignored mime: {mime} {hash}')
             return None
         info = await self.parse_html(hash)
         info.hash = hash
