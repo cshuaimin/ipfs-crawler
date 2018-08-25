@@ -10,8 +10,8 @@ RUN echo "deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu/ bionic main restricted
   && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     postgresql \
     postgresql-server-dev-10 \
-    python3 \
-    python3-pip \
+    python3.7 \
+    python3.7-distutils \
     git \
     gcc \
     g++ \
@@ -20,10 +20,13 @@ RUN echo "deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu/ bionic main restricted
     sudo \
     libmagic1 \
     wget \
+    ca-certificates \
   && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
   && mkdir /var/run/postgresql/10-main.pg_stat_tmp \
   && chown postgres:postgres /var/run/postgresql/10-main.pg_stat_tmp \
-  && sed -i 's/local   all             postgres                                peer/local all postgres trust/' /etc/postgresql/10/main/pg_hba.conf
+  && sed -i 's/local   all             postgres                                peer/local all postgres trust/' /etc/postgresql/10/main/pg_hba.conf \
+  # install python3-pip via apt will install python3.6
+  && wget -O- https://bootstrap.pypa.io/get-pip.py | python3.7
 
 # install pg_jieba
 RUN git clone https://github.com/jaiminpan/pg_jieba /tmp/pg_jieba \
