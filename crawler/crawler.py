@@ -38,7 +38,10 @@ class Crawler:
         # start producer
         self.producer: Future = asyncio.ensure_future(self.read_logs())
         log.info('Started crawling...')
-        await self.producer
+
+        # If an exception is thrown in the background task,
+        # our crawler should not ignore it and continue to run, but throws it.
+        await asyncio.gather(self.producer, *self.workers)
 
     async def stop(self) -> None:
         # cancel producer and consumer
@@ -46,10 +49,12 @@ class Crawler:
         for w in self.workers:
             w.cancel()
         # ensure exited
-        await asyncio.gather(
-            # FIXME: Don't ignore exceptions
+        res = await asyncio.gather(
             self.producer, *self.workers, return_exceptions=True
         )
+        for exc in res:
+            if not isinstance(exc, asyncio.CancelledError):
+                log.error(exc)
         await asyncio.gather(self.ipfs.close(), self.conn_pool.close())
         log.info('Exited')
 
