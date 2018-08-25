@@ -64,9 +64,9 @@ class Crawler:
     async def read_logs(self) -> NoReturn:
         while True:
             async with self.ipfs.log_tail() as log_iter:
-                async for log in log_iter:
-                    if log.get('Operation') == 'handleAddProvider':
-                        await self.queue.put((log['Tags']['key'], ''))
+                async for event in log_iter:
+                    if event.get('Operation') == 'handleAddProvider':
+                        await self.queue.put((event['Tags']['key'], ''))
             log.warning('Log tail restarted!')
 
     async def worker(self) -> NoReturn:
