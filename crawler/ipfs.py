@@ -105,11 +105,9 @@ class Ipfs:
 
     @asynccontextmanager
     async def log_tail(self):
-        while True:
-            async with self.request('log/tail', timeout=0) as resp:
-                sj = StackedJson(resp.content.iter_any())
-                try:
-                    yield sj
-                finally:
-                    await sj.close()
-            print('log tail restarted')
+        async with self.request('log/tail', timeout=0) as resp:
+            sj = StackedJson(resp.content.iter_any())
+            try:
+                yield sj
+            finally:
+                await sj.close()
