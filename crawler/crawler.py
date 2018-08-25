@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from asyncio import Future
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, NoReturn, Union
 
 import asyncpg
@@ -17,7 +17,8 @@ log = logging.getLogger(__name__)
 @dataclass
 class HtmlInfo:
     title: str
-    text: str
+    # text is too long
+    text: str = field(repr=False)
     hash: str = ''
     filename: str = ''
 
@@ -108,6 +109,7 @@ class Crawler:
 
         mime = magic.from_buffer(head, mime=True)
         if mime != 'text/html':
+            log.debug(f'Ignored mime: {mime}')
             return None
         info = await self.parse_html(hash)
         info.hash = hash
@@ -136,11 +138,13 @@ class Crawler:
         return HtmlInfo(title=soup.title.string, text=text)
 
     async def add_result(self, info: HtmlInfo) -> None:
-        self.conn_pool.execute(
+        await self.conn_pool.execute(
             'INSERT INTO html(hash, filename, title, text) '
-            'values ($1, $2, $3, $4, $5)',
-            *info
+            'values ($1, $2, $3, $4)',
+            # dataclass is not iterable
+            info.hash, info.filename, info.title, info.text
         )
+        log.info(f'Indexed {info}')
 
     async def parsed(self, hash: str) -> bool:
         return bool(await self.conn_pool.fetchval(
