@@ -139,7 +139,10 @@ class Crawler:
         # drop blank lines
         text = '\n'.join(chunk for chunk in chunks if chunk)
 
-        return HtmlInfo(title=soup.title.string, text=text)
+        return HtmlInfo(
+            title=soup.title.string if soup.title else '',
+            text=text
+        )
 
     async def add_result(self, info: HtmlInfo) -> None:
         await self.conn_pool.execute(
