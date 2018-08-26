@@ -6,4 +6,4 @@ else
   ipfs init
 fi
 
-exec ipfs daemon
+exec ipfs daemon --enable-gc
