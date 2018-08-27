@@ -1,5 +1,3 @@
-CREATE EXTENSION pg_jieba;
-
 CREATE TABLE html (
     hash varchar(49), 
     filename varchar(128),

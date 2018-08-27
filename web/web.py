@@ -1,4 +1,6 @@
+import asyncio
 from pathlib import Path
+from socket import gaierror
 
 import aiohttp_jinja2
 import asyncpg
@@ -32,10 +34,20 @@ async def search(request):
 
 
 async def conn_pool(app):
-    app['pool'] = await asyncpg.create_pool(
-        user='postgres',
-        database='ipfs_crawler'
-    )
+    for _ in range(10):
+        try:
+            app['pool'] = await asyncpg.create_pool(
+                host='db',
+                user='postgres',
+                database='ipfs_crawler'
+            )
+        except (gaierror, ConnectionRefusedError, asyncpg.CannotConnectNowError):
+            print('Wait for database..')
+            await asyncio.sleep(4)
+        else:
+            break
+    else:
+        raise SystemExit('Why is the database not yet started?')
     yield
     await app['pool'].close()
 
@@ -43,7 +55,7 @@ async def conn_pool(app):
 app = web.Application()
 aiohttp_jinja2.setup(
     app,
-    loader=jinja2.PackageLoader('webui', 'templates')
+    loader=jinja2.PackageLoader('web', 'templates')
 )
 app.router.add_get('/', index)
 app.router.add_get('/search', search)

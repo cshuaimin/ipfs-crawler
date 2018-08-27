@@ -1,10 +1,13 @@
 import asyncio
 import json
 from contextlib import asynccontextmanager
+from functools import partial
 from json import JSONDecodeError, JSONDecoder
-from typing import Dict, List, Union, AsyncIterator
+from typing import AsyncIterator, Dict, List, Union
 
 import aiohttp
+
+from utils import retry
 
 
 class IsDirError(Exception):
@@ -61,7 +64,7 @@ class StackedJson:
 
 
 class Ipfs:
-    def __init__(self, host='127.0.0.1', port=5001) -> None:
+    def __init__(self, host='ipfs', port=5001) -> None:
         self.url = f'http://{host}:{port}/api/v0/'
         self.session: aiohttp.ClientSession = None
 
@@ -76,17 +79,29 @@ class Ipfs:
             self.session = aiohttp.ClientSession()
         if arg:
             params['arg'] = arg
-        async with self.session.get(
-            self.url + path, params=params, timeout=timeout
-        ) as resp:
-            if resp.status != 200:
-                err = await resp.json()
-                if err['Message'] == 'this dag node is a directory':
-                    raise IsDirError
-                else:
-                    raise IpfsError(err['Message'])
+
+        resp = await retry(
+            partial(
+                self.session.get,
+                self.url + path,
+                params=params,
+                timeout=timeout
+            ),
+            'IPFS',
+            aiohttp.ClientConnectorError
+        )
+        if resp.status != 200:
+            err = await resp.json()
+            resp.release()
+            if err['Message'] == 'this dag node is a directory':
+                raise IsDirError
             else:
+                raise IpfsError(err['Message'])
+        else:
+            try:
                 yield resp
+            finally:
+                resp.release()
 
     # https://ipfs.io/docs/api/ and search 'v0/ls'
     async def ls(self, hash: str) -> List[Dict[str, Union[int, str]]]:
