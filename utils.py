@@ -16,6 +16,6 @@ async def retry(func: Callable, name: str, *errors: Exception):
                 log.warning(f'Waiting for {name}..')
                 await asyncio.sleep(4)
             else:
-                raise exc from None
+                raise
     else:
         raise SystemExit(f'Why is the {name} not yet started?')
