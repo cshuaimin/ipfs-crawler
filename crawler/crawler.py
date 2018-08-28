@@ -1,8 +1,9 @@
 import asyncio
 import logging
-
 from asyncio import Future
 from dataclasses import dataclass, field
+from functools import partial
+from socket import gaierror
 from typing import List, NoReturn, Union
 
 import asyncpg
@@ -10,6 +11,7 @@ import magic
 from bs4 import BeautifulSoup
 
 from ipfs import Ipfs, IpfsError, IsDirError
+from utils import retry
 
 logging.basicConfig(level='DEBUG')
 log = logging.getLogger(__name__)
@@ -31,10 +33,17 @@ class Crawler:
         self.ipfs = Ipfs()
 
     async def run(self) -> None:
-        self.conn_pool = await asyncpg.create_pool(
-            user='postgres',
-            database='ipfs_crawler'
+        self.conn_pool = await retry(
+            partial(
+                asyncpg.create_pool,
+                host='db',
+                user='postgres',
+                database='ipfs_crawler'
+            ),
+            'database',
+            gaierror, ConnectionRefusedError, asyncpg.CannotConnectNowError
         )
+
         # start consumers
         for _ in range(8):
             self.workers.append(asyncio.ensure_future(self.worker()))

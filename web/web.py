@@ -1,9 +1,13 @@
+from functools import partial
 from pathlib import Path
+from socket import gaierror
 
 import aiohttp_jinja2
 import asyncpg
 import jinja2
 from aiohttp import web
+
+from utils import retry
 
 
 @aiohttp_jinja2.template('index.jinja2')
@@ -32,9 +36,15 @@ async def search(request):
 
 
 async def conn_pool(app):
-    app['pool'] = await asyncpg.create_pool(
-        user='postgres',
-        database='ipfs_crawler'
+    app['pool'] = await retry(
+        partial(
+            asyncpg.create_pool,
+            host='db',
+            user='postgres',
+            database='ipfs_crawler'
+        ),
+        'database',
+        gaierror, ConnectionRefusedError, asyncpg.CannotConnectNowError
     )
     yield
     await app['pool'].close()
@@ -43,7 +53,7 @@ async def conn_pool(app):
 app = web.Application()
 aiohttp_jinja2.setup(
     app,
-    loader=jinja2.PackageLoader('webui', 'templates')
+    loader=jinja2.PackageLoader('web', 'templates')
 )
 app.router.add_get('/', index)
 app.router.add_get('/search', search)
