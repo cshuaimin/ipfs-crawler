@@ -9,6 +9,7 @@ from typing import List, NoReturn, Union
 import asyncpg
 import magic
 from bs4 import BeautifulSoup
+from pybloom_live import ScalableBloomFilter
 
 from ipfs import Ipfs, IpfsError, IsDirError
 from utils import retry
@@ -33,6 +34,12 @@ class Crawler:
         self.ipfs = Ipfs()
 
     async def run(self) -> None:
+        try:
+            with open('/data/bloom-filter', 'rb') as f:
+                self.filter = ScalableBloomFilter.fromfile(f)
+        except FileNotFoundError:
+            self.filter = ScalableBloomFilter(initial_capacity=100000)
+
         self.conn_pool = await retry(
             partial(
                 asyncpg.create_pool,
@@ -67,6 +74,10 @@ class Crawler:
         for exc in res:
             if not isinstance(exc, asyncio.CancelledError):
                 log.error(exc)
+
+        with open('/data/bloom-filter', 'wb') as f:
+            self.filter.tofile(f)
+
         await asyncio.gather(self.ipfs.close(), self.conn_pool.close())
         log.info('Exited')
 
@@ -81,10 +92,10 @@ class Crawler:
     async def worker(self) -> NoReturn:
         while True:
             hash, filename = await self.queue.get()
-            if await self.parsed(hash):
+            if hash in self.filter:
                 log.debug(f'Ignored {hash}')
                 continue
-            await self.add_parsed(hash)
+            self.filter.add(hash)
             try:
                 info = await self.parse(hash, filename)
                 if info is not None:
@@ -161,16 +172,6 @@ class Crawler:
             info.hash, info.filename, info.title, info.text
         )
         log.info(f'Indexed {info}')
-
-    async def parsed(self, hash: str) -> bool:
-        return bool(await self.conn_pool.fetchval(
-            'SELECT count(1) from parsed where hash = $1', hash
-        ))
-
-    async def add_parsed(self, hash: str) -> None:
-        await self.conn_pool.execute(
-            'INSERT INTO parsed(hash) VALUES ($1)', hash
-        )
 
 
 if __name__ == '__main__':

@@ -1,13 +1,11 @@
 CREATE TABLE html (
-    hash varchar(49), 
-    filename varchar(128),
+    hash text,
+    filename text,
     title text,
     text text,
     tsv tsvector
 );
 CREATE INDEX tsv_idx ON html USING GIN (tsv);
-
-CREATE TABLE parsed (hash varchar(49));
 
 CREATE FUNCTION tsv_update_trigger() RETURNS trigger AS $$
 begin
