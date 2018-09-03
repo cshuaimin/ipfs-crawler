@@ -3,3 +3,4 @@ asyncpg
 python-magic
 bs4
 pybloom_live
+termcolor

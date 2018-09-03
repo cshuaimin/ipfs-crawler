@@ -10,9 +10,13 @@ services:
       - "5001:5001"
       # Gateway
       - "8080:8080"
+    logging:
+      driver: none
 
   db:
     build: ./db
+    logging:
+      driver: none
 
   crawler:
     build:

@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from asyncio import Future
 from dataclasses import dataclass, field
 from functools import partial
@@ -12,10 +11,8 @@ from bs4 import BeautifulSoup
 from pybloom_live import ScalableBloomFilter
 
 from ipfs import Ipfs, IpfsError, IsDirError
-from utils import retry
+from utils import retry, log
 
-logging.basicConfig(level='DEBUG')
-log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -36,10 +33,10 @@ class Crawler:
     async def run(self) -> None:
         try:
             with open('/data/bloom-filter', 'rb') as f:
-                log.debug('Using saved bloom-filter')
+                log('debug', 'Using saved bloom-filter')
                 self.filter = ScalableBloomFilter.fromfile(f)
         except FileNotFoundError:
-            log.debug('Creating new bloom-filter')
+            log('debug', 'Creating new bloom-filter')
             self.filter = ScalableBloomFilter(initial_capacity=100000)
 
         self.conn_pool = await retry(
@@ -58,7 +55,7 @@ class Crawler:
             self.workers.append(asyncio.ensure_future(self.worker()))
         # start producer
         self.producer: Future = asyncio.ensure_future(self.read_logs())
-        log.info('Started crawling...')
+        log('info', 'Started crawling')
 
         # If an exception is thrown in the background task,
         # our crawler should not ignore it and continue to run, but throws it.
@@ -75,14 +72,14 @@ class Crawler:
         )
         for exc in res:
             if not isinstance(exc, asyncio.CancelledError):
-                log.error(exc)
+                log('error', repr(exc))
 
-        log.debug('Saving bloom-filter')
+        log('debug', 'Saving bloom-filter')
         with open('/data/bloom-filter', 'wb') as f:
             self.filter.tofile(f)
 
         await asyncio.gather(self.ipfs.close(), self.conn_pool.close())
-        log.info('Exited')
+        log('info', 'Exited')
 
     async def read_logs(self) -> NoReturn:
         while True:
@@ -90,13 +87,12 @@ class Crawler:
                 async for event in log_iter:
                     if event.get('Operation') == 'handleAddProvider':
                         await self.queue.put((event['Tags']['key'], ''))
-            log.warning('Log tail restarted!')
+            log('warning', 'Log tail restarted')
 
     async def worker(self) -> NoReturn:
         while True:
             hash, filename = await self.queue.get()
             if hash in self.filter:
-                log.debug(f'Ignored {hash}')
                 continue
             self.filter.add(hash)
             try:
@@ -108,15 +104,14 @@ class Crawler:
                 # when self.stop() called. Won't log this.
                 raise
             except asyncio.TimeoutError:
-                log.warning(f'{hash} timed out')
+                log('warning', f'Timed out: {hash}')
             except IpfsError as exc:
-                log.error(exc)
+                log('error', repr(exc))
             except Exception as exc:
-                log.error(f'Failed to parse {hash}, worker exited: {exc!r}')
+                log('error', f'Failed to parse {hash}, worker exited: {exc!r}')
                 raise
 
     async def parse(self, hash: str, filename: str) -> Union[HtmlInfo, None]:
-        log.debug(f'Parsing {hash} {filename}')
         try:
             head = await self.ipfs.cat(hash, length=128)
         # This hash is a directory, add files in it to the queue. There is
@@ -136,7 +131,6 @@ class Crawler:
 
         mime = magic.from_buffer(head, mime=True)
         if mime != 'text/html':
-            log.debug(f'Ignored mime: {mime} {hash}')
             return None
         info = await self.parse_html(hash)
         info.hash = hash
@@ -174,10 +168,18 @@ class Crawler:
             # dataclass is not iterable
             info.hash, info.filename, info.title, info.text
         )
-        log.info(f'Indexed {info}')
 
 
 if __name__ == '__main__':
+    import sys
+    print('''
+    ██╗██████╗ ███████╗███████╗     ██████╗██████╗  █████╗ ██╗    ██╗██╗     ███████╗██████╗ 
+    ██║██╔══██╗██╔════╝██╔════╝    ██╔════╝██╔══██╗██╔══██╗██║    ██║██║     ██╔════╝██╔══██╗
+    ██║██████╔╝█████╗  ███████╗    ██║     ██████╔╝███████║██║ █╗ ██║██║     █████╗  ██████╔╝
+    ██║██╔═══╝ ██╔══╝  ╚════██║    ██║     ██╔══██╗██╔══██║██║███╗██║██║     ██╔══╝  ██╔══██╗
+    ██║██║     ██║     ███████║    ╚██████╗██║  ██║██║  ██║╚███╔███╔╝███████╗███████╗██║  ██║
+    ╚═╝╚═╝     ╚═╝     ╚══════╝     ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚══╝╚══╝ ╚══════╝╚══════╝╚═╝  ╚═╝
+    ''', file=sys.stderr, flush=True)
     loop = asyncio.get_event_loop()
     crawler = Crawler()
     try:

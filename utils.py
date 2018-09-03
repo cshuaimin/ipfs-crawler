@@ -1,10 +1,19 @@
 import asyncio
-import logging
-
+from sys import stderr
 from typing import Callable
 
+from termcolor import colored
 
-log = logging.getLogger(__name__)
+levels = {
+    'debug': colored('[~]', 'white', attrs=['bold']),
+    'info': colored('[+]', 'green', attrs=['bold']),
+    'warning': colored('[!]', 'yellow', attrs=['bold']),
+    'error': colored('[-]', 'red', attrs=['bold'])
+}
+
+
+def log(level: str, msg: str) -> None:
+    print(f'{levels[level]} {msg}', file=stderr, flush=True)
 
 
 async def retry(func: Callable, name: str, *errors: Exception):
@@ -13,7 +22,7 @@ async def retry(func: Callable, name: str, *errors: Exception):
             return await func()
         except Exception as exc:
             if any(isinstance(exc, err) for err in errors):
-                log.warning(f'Waiting for {name}..')
+                log('warning', f'Waiting for {name}')
                 await asyncio.sleep(4)
             else:
                 raise
