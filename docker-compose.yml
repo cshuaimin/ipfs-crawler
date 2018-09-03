@@ -3,6 +3,13 @@ version: "3"
 services:
   ipfs:
     image: ipfs/go-ipfs
+    ports:
+      # Swarm TCP
+      - "4001:4001"
+      # HTTP API
+      - "5001:5001"
+      # Gateway
+      - "8080:8080"
 
   db:
     build: ./db
@@ -21,3 +28,5 @@ services:
       dockerfile: ./web/Dockerfile
     depends_on:
       - db
+    ports:
+      - "9000:9000"

@@ -36,8 +36,10 @@ class Crawler:
     async def run(self) -> None:
         try:
             with open('/data/bloom-filter', 'rb') as f:
+                log.debug('Using saved bloom-filter')
                 self.filter = ScalableBloomFilter.fromfile(f)
         except FileNotFoundError:
+            log.debug('Creating new bloom-filter')
             self.filter = ScalableBloomFilter(initial_capacity=100000)
 
         self.conn_pool = await retry(
@@ -75,6 +77,7 @@ class Crawler:
             if not isinstance(exc, asyncio.CancelledError):
                 log.error(exc)
 
+        log.debug('Saving bloom-filter')
         with open('/data/bloom-filter', 'wb') as f:
             self.filter.tofile(f)
 
