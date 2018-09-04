@@ -138,7 +138,7 @@ class Crawler:
         return info
 
     async def parse_html(self, hash: str) -> HtmlInfo:
-        html = (await self.ipfs.cat(hash)).decode()
+        html = (await self.ipfs.cat(hash)).decode(errors='ignore')
         soup = BeautifulSoup(html, 'html.parser')
         # kill all script and style elements
         for script in soup(["script", "style"]):
