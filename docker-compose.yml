@@ -25,6 +25,9 @@ services:
     depends_on:
       - ipfs
       - db
+    volumes:
+      - /data
+    stop_signal: SIGINT
 
   web:
     build:
@@ -34,3 +37,4 @@ services:
       - db
     ports:
       - "9000:9000"
+    stop_signal: SIGINT
