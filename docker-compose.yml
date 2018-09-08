@@ -3,6 +3,7 @@ version: "3"
 services:
   ipfs:
     image: ipfs/go-ipfs
+    command: ['daemon', '--migrate=true', '--enable-gc']
     ports:
       # Swarm TCP
       - "4001:4001"
