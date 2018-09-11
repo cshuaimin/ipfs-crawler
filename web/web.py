@@ -1,3 +1,4 @@
+import re
 from functools import partial
 from pathlib import Path
 from socket import gaierror
@@ -32,7 +33,23 @@ async def search(request):
         'LIMIT 10',
         query
     )
+    result = [
+        {
+            'hash': r.hash,
+            'title': highlight(r.title),
+            'text': highlight(r.text)
+        } for r in result
+    ]
     return {'result': result, 'query': query}
+
+
+WORDS = re.compile(r'\w+')
+
+
+def highlight(s: str, ts_query: str):
+    for word in WORDS.findall(ts_query):
+        s = s.replace(word, f'<b>{word}</b>')
+    return s
 
 
 async def conn_pool(app):
