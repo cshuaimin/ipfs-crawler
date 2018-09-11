@@ -10,8 +10,8 @@ CREATE INDEX tsv_idx ON html USING GIN (tsv);
 CREATE FUNCTION tsv_update_trigger() RETURNS trigger AS $$
 begin
   new.tsv :=
-    setweight(to_tsvector('jiebaqry', coalesce(new.title, '')), 'A') ||
-    setweight(to_tsvector('jiebaqry', coalesce(new.text, '')), 'C');
+    setweight(to_tsvector('chinese_zh', coalesce(new.title, '')), 'A') ||
+    setweight(to_tsvector('chinese_zh', coalesce(new.text, '')), 'C');
   return new;
 end
 $$ LANGUAGE plpgsql;

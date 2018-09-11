@@ -24,9 +24,11 @@ async def search(request):
     if not query:
         raise web.HTTPFound('/')
     result = await request.app['pool'].fetch(
-        'SELECT hash, title, text, '
+        'SELECT hash, '
+        "ts_headline('chinese_zh', title, query) as title, "
+        "ts_headline('chinese_zh', text, query) as text, "
         'ts_rank_cd(tsv, query) AS rank '
-        "FROM html, to_tsquery('jiebaqry', $1) query "
+        "FROM html, to_tsquery('chinese_zh', $1) query "
         'WHERE tsv @@ query '
         'ORDER BY rank DESC '
         'LIMIT 10',
