@@ -36,8 +36,8 @@ async def search(request):
     result = [
         {
             'hash': r['hash'],
-            'title': highlight(r['title']),
-            'text': highlight(r['text'])
+            'title': highlight(r['title'], query),
+            'text': highlight(r['text'], query)
         } for r in result
     ]
     return {'result': result, 'query': query}
@@ -46,8 +46,8 @@ async def search(request):
 WORDS = re.compile(r'\w+')
 
 
-def highlight(s: str, ts_query: str):
-    for word in WORDS.findall(ts_query):
+def highlight(s: str, query: str):
+    for word in WORDS.findall(query):
         s = s.replace(word, f'<b>{word}</b>')
     return s
 
