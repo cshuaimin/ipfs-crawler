@@ -35,9 +35,9 @@ async def search(request):
     )
     result = [
         {
-            'hash': r.hash,
-            'title': highlight(r.title),
-            'text': highlight(r.text)
+            'hash': r['hash'],
+            'title': highlight(r['title']),
+            'text': highlight(r['text'])
         } for r in result
     ]
     return {'result': result, 'query': query}
